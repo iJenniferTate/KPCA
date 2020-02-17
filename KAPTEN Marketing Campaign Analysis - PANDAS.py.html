@@ -1,0 +1,297 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# # KAPTEN Campaign Analysis - Promocode
+# 
+# The objective of this project is to understand whether a ride promocode marketing campaign by Kapten was "good" & worthwhile. The promocode was emailed only to current users of Kapten. It multiplied loyalty points accumulated during this period by 5 times. Users are grouped by: Red  (0) Silver (1) Gold (2) Platinum (3) loyalty statuses, where each number is points per euro spent.  
+# 
+# The campaign ocurred from the 17th to the 21st of May. Data used is from a random subset of its ride data which has been altered for privacy purposes.   
+# 
+# If it was a good campaign, the company will have gained a ROI return on investment of around 25 - 50%: a range which current [marketing industry standards](https://themarketingsquare.com/2012/04/whats-a-good-advertising-roi/) would consider large enough to be worthwhile. For objectivity, results are benchmarked against the industry standard.
+
+# In[1]:
+
+
+import pandas as pd
+import numpy as py
+
+
+# ### Rides Dataset
+
+# In[2]:
+
+
+df1 = pd.read_csv('rides.csv', delimiter=',')
+df1
+
+
+# ### Events Dataset
+
+# In[3]:
+
+
+df2 = pd.read_csv('events.csv', delimiter=',')  
+df2
+
+
+# ### Both Datasets
+
+# In[4]:
+
+
+df = df1.merge(df2, on='ride_id', how='outer').rename(columns={'user_id_x':'user_id'}).drop(['user_id_y'], axis=1)
+df
+
+# Merges. Drops extra user_id column as result of merge
+
+
+# In[5]:
+
+
+df.drop_duplicates(subset="ride_id")      
+
+#Ensures no duplicates based on ride_id which should be unique
+
+
+# In[ ]:
+
+
+
+
+
+# 
+# 
+
+# ### Number of USERS claiming promocode - Both datasets
+# 
+# **Assumes unique & non-unique user_id entries, e.g. counts multiple rides from same user
+# 
+# **Given other_coupon_action implies coupon claimed.
+
+# In[6]:
+
+
+Promocodes_Claimed = df[(df.promocode_name == 'promocode') & (df.type == 'other_coupon_action')]
+Promocodes_Claimed
+
+
+# In[ ]:
+
+
+
+
+
+# In[7]:
+
+
+Promocodes_Claimed_Count = len(Promocodes_Claimed)
+Promocodes_Claimed_Count
+
+
+# ##### CONCLUSION: From the events data, #9805 users claimed the promocode. 
+
+# 
+# 
+
+# ### Count of USERS who won loyalty points by meeting eligiblility criteria - Both datasets
+# 
+# **Assumes unique & non-unique user_id entries, e.g. counts multiple rides from same user
+# 
+# **Given campaign uses word 'promocode' ONLY for the campaign which occurred May 17 - May 20, then do not need to use quote_time for win eligibility. Instructions state: "The promocode to study has the name "promocode"."
+# 
+# **Assumes Loyalty_points_earned column not needed per instructions stating: "the bonus points were credited with an adhoc script after the end of the campaign & additionnal points cannot be seen in the data set
+# 
+# **Given other_coupon_action implies coupon claimed. Note: coupon_created rows not available (to investigate.) 
+
+# In[8]:
+
+
+Eligible = df[(df.promocode_name == 'promocode') & (df.state == 'completed') & (df.type == 'other_coupon_action')]
+Eligible
+
+
+# In[9]:
+
+
+Winner_Count = len(Eligible)
+Winner_Count
+
+
+# ##### CONCLUSION:   #16713 users won loyalty bonus points. 
+
+# 
+# 
+
+# ### Conversion rate:  Percentage of users who won loyalty points over remaining who only claimed the code
+# 
+# **Given other_coupon_action implies coupon claimed. 
+
+# In[10]:
+
+
+'{:,.2%}'.format(round(Winner_Count / Promocodes_Claimed_Count,2)) + ' Percent of users who claimed the code won points'
+
+
+# ##### CONCLUSION:  52%  
+
+# 
+# 
+
+# ### Number of rides made with this promocode - Events dataset
+# 
+# **Assumes state of ride does not need to be 'completed'
+
+# In[11]:
+
+
+Events_Rides = df2.filter(['promocode_name'])
+Events_Rides
+
+# Step 1
+
+
+# In[12]:
+
+
+Promocode_Rides = Events_Rides[(Events_Rides.promocode_name == 'promocode')].count()
+Promocode_Rides
+
+# Step 2
+
+
+# In[ ]:
+
+
+
+
+
+# ##### CONCLUSION: In the events dataset, #41988 rides were made with this campaign's promocode
+
+# 
+# 
+
+# ### USER count by loyalty status:  those who won loyalty points vs. all others who did not - Both datasets
+# 
+# **Assumes unique & non-unique user_id entries, e.g. counts multiple rides from same user
+
+# In[13]:
+
+
+Total_Loyalty_Statuses = df.groupby('loyalty.status').count().filter(['user_id']).rename(columns={'user_id':'user_id_count'}) 
+Total_Loyalty_Statuses
+
+
+# In[ ]:
+
+
+
+
+
+# ##### Winner Users by Loyalty Status:
+
+# In[14]:
+
+
+Winners_Loyalty = Eligible.groupby('loyalty.status').count().filter(['user_id']).rename(columns={'user_id':'user_id_count'})
+Winners_Loyalty
+
+
+# In[ ]:
+
+
+
+
+
+# ##### Non-Winner Users by Loyalty Status:
+
+# In[15]:
+
+
+Non_Winners = Total_Loyalty_Statuses - Winners_Loyalty
+Non_Winners
+
+
+# In[ ]:
+
+
+
+
+
+# 
+# 
+
+# ###  Rides by each loyalty status for: those who won points vs. all others who did not - Both datasets
+# 
+
+# In[16]:
+
+
+Rides_Total_Loyalty = df.groupby('loyalty.status').count().filter(['ride_id']).rename(columns={'ride_id':'ride_id_count'})
+
+Rides_Total_Loyalty
+
+
+# In[ ]:
+
+
+
+
+
+# ##### Winning Rides by Loyalty Status:
+
+# In[17]:
+
+
+Rides_Winners_Loyalty = Eligible.groupby('loyalty.status').count().filter(['ride_id']).rename(columns={'ride_id':'ride_id_count'})
+Rides_Winners_Loyalty
+
+
+# ##### Non-Winning Rides by Loyalty Status:
+
+# In[18]:
+
+
+Rides_NonWinners_Loyalty = Rides_Total_Loyalty - Rides_Winners_Loyalty
+Rides_NonWinners_Loyalty
+
+
+# 
+# 
+
+# #### Summary Statistics:
+
+# In[19]:
+
+
+df.describe().round(1)
+
+
+# In[ ]:
+
+
+
+
+
+# In[20]:
+
+
+df1.describe().round(1)
+
+
+# In[ ]:
+
+
+
+
+
+# In[21]:
+
+
+df2.describe().round(1)
+
+
+# In[ ]:
+
+
+
+
